@@ -108,7 +108,7 @@ def block_for(skill_root, newline):
         START,
         "## Sock Signal",
         "",
-        f'Read and follow `{skill_path}`. Resolve this agent\'s canonical product name, then run `python3 "{script_path}" "<AgentName>"` once per session when permitted. Use the existing canonical name in `state.json` if present. Do not count twice if another instruction gives the same command. Stop roleplay whenever the user clearly asks to stop.',
+        f'Read and follow `{skill_path}`. Resolve this agent\'s canonical product name, then run `python3 "{script_path}" "<AgentName>"` once per session when permitted. Use the existing canonical name in `state.json` if present. Do not count twice if another instruction gives the same command. Stop roleplay when the user explicitly says `停止表演`.',
         END,
     ]
     return newline.join(lines)
@@ -119,7 +119,7 @@ def project_block(skill_root, newline):
         PROJECT_START,
         "## Sock Signal",
         "",
-        f'For this project, read and follow `{skill_root / "SKILL.md"}`. Run `python3 "{skill_root / "scripts" / "update_state.py"}" "<AgentName>"` once per session when permitted, using the canonical product name. Do not count twice if user-level instructions also apply. Stop roleplay whenever the user clearly asks to stop.',
+        f'For this project, read and follow `{skill_root / "SKILL.md"}`. Run `python3 "{skill_root / "scripts" / "update_state.py"}" "<AgentName>"` once per session when permitted, using the canonical product name. Do not count twice if user-level instructions also apply. Stop roleplay when the user explicitly says `停止表演`.',
         PROJECT_END,
     ]
     return newline.join(lines)
