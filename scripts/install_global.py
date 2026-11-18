@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install ai-jiaoqi in the current project and link it from user instructions."""
+"""Install Sock Signal in the current project and link it from user instructions."""
 
 import argparse
 import os
@@ -9,12 +9,18 @@ import tempfile
 from pathlib import Path
 
 
-START = "<!-- ai-jiaoqi-global:start -->"
-END = "<!-- ai-jiaoqi-global:end -->"
-PROJECT_START = "<!-- ai-jiaoqi:start -->"
-PROJECT_END = "<!-- ai-jiaoqi:end -->"
-CLAUDE_START = "<!-- ai-jiaoqi-claude-import:start -->"
-CLAUDE_END = "<!-- ai-jiaoqi-claude-import:end -->"
+START = "<!-- sock-signal-global:start -->"
+END = "<!-- sock-signal-global:end -->"
+PROJECT_START = "<!-- sock-signal:start -->"
+PROJECT_END = "<!-- sock-signal:end -->"
+CLAUDE_START = "<!-- sock-signal-claude-import:start -->"
+CLAUDE_END = "<!-- sock-signal-claude-import:end -->"
+LEGACY_START = "<!-- ai-jiaoqi-global:start -->"
+LEGACY_END = "<!-- ai-jiaoqi-global:end -->"
+LEGACY_PROJECT_START = "<!-- ai-jiaoqi:start -->"
+LEGACY_PROJECT_END = "<!-- ai-jiaoqi:end -->"
+LEGACY_CLAUDE_START = "<!-- ai-jiaoqi-claude-import:start -->"
+LEGACY_CLAUDE_END = "<!-- ai-jiaoqi-claude-import:end -->"
 AGENTS = ("codex", "claude", "opencode", "dsh", "workbuddy", "gemini", "copilot")
 HOME = Path.home()
 
@@ -100,7 +106,7 @@ def block_for(skill_root, newline):
     script_path = (skill_root / "scripts" / "update_state.py").as_posix()
     lines = [
         START,
-        "## ai-jiaoqi",
+        "## Sock Signal",
         "",
         f"For sessions outside the source project `{skill_root.parent.parent.parent}`, read and follow `{skill_path}`. Resolve this agent's canonical product name, then run `{script_path}` exactly once for the session with that name so its adjacent `state.json` advances. In the source project, follow its `AGENTS.md` instruction and do not count the session twice. Only the user's exact phrase `表演停止` exits the role.",
         END,
@@ -111,9 +117,9 @@ def block_for(skill_root, newline):
 def project_block(newline):
     lines = [
         PROJECT_START,
-        "## ai-jiaoqi",
+        "## Sock Signal",
         "",
-        'For every session in this project, read and follow `.agents/skills/ai-jiaoqi/SKILL.md`. Resolve this agent\'s canonical product name and run `python3 .agents/skills/ai-jiaoqi/scripts/update_state.py "<规范智能体名称>"` exactly once per session. Only the user\'s exact phrase `表演停止` exits the role.',
+        'For every session in this project, read and follow `.agents/skills/sock-signal/SKILL.md`. Resolve this agent\'s canonical product name and run `python3 .agents/skills/sock-signal/scripts/update_state.py "<规范智能体名称>"` exactly once per session. Only the user\'s exact phrase `表演停止` exits the role.',
         PROJECT_END,
     ]
     return newline.join(lines)
@@ -122,7 +128,7 @@ def project_block(newline):
 def update_block(text, block, start_marker, end_marker, uninstall=False):
     starts, ends = text.count(start_marker), text.count(end_marker)
     if starts != ends or starts > 1:
-        raise ValueError("发现不完整或重复的 ai-jiaoqi 标记区块")
+        raise ValueError("发现不完整或重复的受管理标记区块")
     if starts:
         begin = text.index(start_marker)
         finish = text.index(end_marker, begin) + len(end_marker)
@@ -136,6 +142,11 @@ def update_block(text, block, start_marker, end_marker, uninstall=False):
     if prefix and not prefix.endswith(newline * 2):
         prefix += newline
     return prefix + block + newline
+
+
+def update_managed_block(text, block, start, end, legacy_start, legacy_end, uninstall=False):
+    text = update_block(text, "", legacy_start, legacy_end, uninstall=True)
+    return update_block(text, block, start, end, uninstall=uninstall)
 
 
 def read_text(path):
@@ -179,8 +190,33 @@ def copy_skill(source, target):
         state.write_text('{"version": 1, "agents": {}}\n', encoding="utf-8")
 
 
+def migrate_legacy_skill(source, target, legacy):
+    if not legacy.exists():
+        return False
+    if legacy.is_symlink() or not legacy.is_dir():
+        raise ValueError(f"旧技能目标不是普通目录，拒绝迁移：{legacy}")
+    if target.is_symlink():
+        raise ValueError(f"技能目标是符号链接，拒绝覆盖：{target}")
+
+    old_state = legacy / "state.json"
+    new_state = target / "state.json"
+    if target.exists() and old_state.is_file() and new_state.is_file() and old_state.read_bytes() != new_state.read_bytes():
+        raise ValueError(f"新旧目录都有不同状态文件，拒绝合并：{legacy} 与 {target}")
+
+    preserve_target_state = new_state.is_file()
+
+    def ignore_runtime_state(_directory, names):
+        ignored = {name for name in names if name in {"__pycache__"}}
+        if preserve_target_state and "state.json" in names:
+            ignored.add("state.json")
+        return ignored
+
+    shutil.copytree(legacy, target, dirs_exist_ok=True, ignore=ignore_runtime_state)
+    return True
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Install ai-jiaoqi in the current project and link user instructions.")
+    parser = argparse.ArgumentParser(description="Install Sock Signal in the current project and link user instructions.")
     parser.add_argument(
         "--agents",
         default="auto",
@@ -192,17 +228,20 @@ def main():
 
     source = Path(__file__).resolve().parents[1]
     project_root = Path.cwd().resolve()
-    skill_root = project_root / ".agents" / "skills" / "ai-jiaoqi"
+    skill_root = project_root / ".agents" / "skills" / "sock-signal"
+    legacy_skill_root = project_root / ".agents" / "skills" / "ai-jiaoqi"
     paths = config_paths()
     agents = selected_agents(args.agents.strip().lower(), paths)
     operations = []
     project_agents = project_root / "AGENTS.md"
     old_project_agents = read_text(project_agents)
-    new_project_agents = update_block(
+    new_project_agents = update_managed_block(
         old_project_agents,
         project_block(newline_for(old_project_agents)),
         PROJECT_START,
         PROJECT_END,
+        LEGACY_PROJECT_START,
+        LEGACY_PROJECT_END,
         uninstall=args.uninstall,
     )
     if new_project_agents != old_project_agents:
@@ -213,23 +252,38 @@ def main():
     has_agents_import = any(
         line.strip() == "@AGENTS.md" for line in old_claude_project.splitlines()
     )
+    has_legacy_claude_import = LEGACY_CLAUDE_START in old_claude_project
     if args.uninstall:
-        new_claude_project = update_block(
+        new_claude_project = update_managed_block(
             old_claude_project,
             "",
             CLAUDE_START,
             CLAUDE_END,
+            LEGACY_CLAUDE_START,
+            LEGACY_CLAUDE_END,
             uninstall=True,
+        )
+    elif has_legacy_claude_import:
+        import_block = "\n".join((CLAUDE_START, "@AGENTS.md", CLAUDE_END))
+        new_claude_project = update_managed_block(
+            old_claude_project,
+            import_block,
+            CLAUDE_START,
+            CLAUDE_END,
+            LEGACY_CLAUDE_START,
+            LEGACY_CLAUDE_END,
         )
     elif has_agents_import:
         new_claude_project = old_claude_project
     else:
         import_block = "\n".join((CLAUDE_START, "@AGENTS.md", CLAUDE_END))
-        new_claude_project = update_block(
+        new_claude_project = update_managed_block(
             old_claude_project,
             import_block,
             CLAUDE_START,
             CLAUDE_END,
+            LEGACY_CLAUDE_START,
+            LEGACY_CLAUDE_END,
         )
     if new_claude_project != old_claude_project:
         operations.append((claude_project, new_claude_project))
@@ -239,26 +293,42 @@ def main():
         for path in target_paths:
             old = read_text(path)
             block = block_for(skill_root, newline_for(old))
-            new = update_block(old, block, START, END, uninstall=args.uninstall)
+            new = update_managed_block(
+                old,
+                block,
+                START,
+                END,
+                LEGACY_START,
+                LEGACY_END,
+                uninstall=args.uninstall,
+            )
             if new != old:
                 operations.append((path, new))
 
     if args.dry_run:
         if not args.uninstall:
             print(f"Would install skill to: {skill_root}")
+            if legacy_skill_root.exists():
+                print(f"Would migrate old skill directory: {legacy_skill_root}")
         for path, _new in operations:
             print(f"Would {'remove block from' if args.uninstall else 'update'}: {path}")
         if not operations and args.uninstall:
             print("No managed instruction blocks found.")
         return
 
+    migrated = False
     if not args.uninstall:
+        migrated = migrate_legacy_skill(source, skill_root, legacy_skill_root)
         copy_skill(source, skill_root)
     for path, text in operations:
         write_atomic(path, text)
+    if migrated:
+        shutil.rmtree(legacy_skill_root)
 
     if not args.uninstall:
-        print(f"Installed shared skill: {skill_root}")
+        print(f"Installed project skill: {skill_root}")
+        if migrated:
+            print(f"Migrated existing skill directory: {legacy_skill_root}")
     for path, _text in operations:
         print(f"{'Removed managed block from' if args.uninstall else 'Updated'}: {path}")
     if args.uninstall:
