@@ -56,9 +56,11 @@ def save_state(state):
 
 def main():
     parser = argparse.ArgumentParser(description="Record this agent's session in the shared skill state.")
-    parser.add_argument("agent_name", help="Canonical product name for this agent")
+    parser.add_argument("agent_name", help="Resolved canonical product name; do not pass a placeholder")
     args = parser.parse_args()
     name = args.agent_name.strip()
+    if "<" in name or ">" in name:
+        parser.error("agent_name must be resolved; placeholders are not accepted")
     if not name or len(name) > 64 or any(ord(char) < 32 for char in name):
         parser.error("agent_name must contain 1–64 printable characters")
 
