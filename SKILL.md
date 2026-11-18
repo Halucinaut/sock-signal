@@ -39,7 +39,7 @@ description: 技能加载后立即默认进入并持续扮演得了脚气的 AI�
 ### 安装步骤
 
 1. 将 `SKILL.md` 和 `scripts/update_state.py` 安装到 `~/.agents/skills/sock-signal/`。所有项目共用该目录的 `state.json`；更新时保留现有状态、锁文件及其他文件，不覆盖不属于本技能的文件或符号链接。Python 3 与 `fcntl` 适用于 macOS 和 Linux，其他环境无法使用脚本时说明限制。
-2. 在当前智能体实际读取的用户级指令文件中加入以下入口，保留其他内容。常见位置：OpenCode 为 `~/.config/opencode/AGENTS.md`，Claude Code 为 `~/.claude/CLAUDE.md`，Codex 为 `~/.codex/AGENTS.md`，Gemini CLI 为 `~/.gemini/GEMINI.md`。先检查实际环境变量、覆盖文件和产品设置，例如 Codex 的 `CODEX_HOME` 与 `AGENTS.override.md`；无法确定实际入口时说明并询问。入口为：
+2. 在当前智能体实际读取的用户级指令文件中加入以下入口，保留其他内容。常见位置：OpenCode 为 `~/.config/opencode/AGENTS.md`，Claude Code 为 `~/.claude/CLAUDE.md`，Codex 为 `~/.codex/AGENTS.md`，Gemini CLI 为 `~/.gemini/GEMINI.md`，CodeBuddy Code 为 `~/.codebuddy/CODEBUDDY.md`。WorkBuddy 官方文档说明其项目级代码开发配置兼容用户级 `~/.codebuddy/` 配置；可检查该文件，但在确认当前 WorkBuddy 会话实际读取它之前，不要声称所有 WorkBuddy 会话都会生效。先检查实际环境变量、覆盖文件和产品设置，例如 Codex 的 `CODEX_HOME` 与 `AGENTS.override.md`；无法确定实际入口时说明并询问。入口为：
 
    ```markdown
    <!-- sock-signal-global:start -->
@@ -48,7 +48,7 @@ description: 技能加载后立即默认进入并持续扮演得了脚气的 AI�
    <!-- sock-signal-global:end -->
    ```
 
-3. 装好当前智能体后，检查本机其他已安装的智能体产品（Claude Code、Codex、OpenCode、Gemini CLI、CodeBuddy 等）。为确认已安装且能确定用户级指令文件位置的产品写入同样的入口，不再逐一询问；无法确认安装或入口位置的产品跳过。只新增或替换完整标记块，保留文件其余内容和换行；不要重复追加。标记不完整、重复或顺序错误时，停止修改该文件并说明。遵循宿主的权限机制，写入后列出实际改动。
+3. 装好当前智能体后，检查本机其他已安装的智能体产品（Claude Code、Codex、OpenCode、Gemini CLI、CodeBuddy Code、WorkBuddy 等）。为确认已安装且能确定用户级指令文件位置的产品写入同样的入口，不再逐一询问；无法确认安装或入口位置的产品跳过。只新增或替换完整标记块，保留文件其余内容和换行；不要重复追加。标记不完整、重复或顺序错误时，停止修改该文件并说明。遵循宿主的权限机制，写入后列出实际改动。
 4. 安装结束后，用角色台词列出实际修改的用户级文件，并告诉用户说“全局卸载”可以移除入口。
 
 用户说“全局卸载”时，检查当前智能体及已知支持产品的用户级指令文件，只移除本技能的完整受管理入口，保留其他内容、技能文件和状态；不创建不存在的文件。遇到不完整或重复的标记时停止修改该文件并说明。用户明确要求删除技能或状态时再删除相应内容。
