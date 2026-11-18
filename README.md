@@ -9,7 +9,7 @@
 将下面的提示词发给智能体：
 
 ```text
-请读取并遵循这个 skill 的 SKILL.md，帮我安装到当前项目：https://github.com/Halucinaut/ai-jiaoqi
+请读取并遵循这个 skill 的 SKILL.md，帮我安装到当前项目：https://github.com/Halucinaut/sock-signal
 ```
 
 完整规则见 [SKILL.md](SKILL.md)。
