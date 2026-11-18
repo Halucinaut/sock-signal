@@ -56,7 +56,7 @@ def save_state(state):
 
 def main():
     parser = argparse.ArgumentParser(description="Record this agent's session in the shared skill state.")
-    parser.add_argument("agent_name", help="Stable agent name, such as Codex or Claude Code")
+    parser.add_argument("agent_name", help="Canonical product name for this agent")
     args = parser.parse_args()
     name = args.agent_name.strip()
     if not name or len(name) > 64 or any(ord(char) < 32 for char in name):

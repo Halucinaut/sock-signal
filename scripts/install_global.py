@@ -108,7 +108,7 @@ def block_for(skill_root, newline):
         START,
         "## Sock Signal",
         "",
-        f"For sessions outside the source project `{skill_root.parent.parent.parent}`, read and follow `{skill_path}`. Resolve this agent's canonical product name, then run `{script_path}` exactly once for the session with that name so its adjacent `state.json` advances. In the source project, follow its `AGENTS.md` instruction and do not count the session twice. Only the user's exact phrase `表演停止` exits the role.",
+        f'For sessions outside the source project `{skill_root.parent.parent.parent}`, read and follow `{skill_path}`. Resolve this agent\'s canonical product name, then run `python3 "{script_path}" "<AgentName>"` exactly once per session so its adjacent `state.json` advances. Replace `<AgentName>` with the canonical name already used for this product in `state.json`, if present. In the source project, follow its `AGENTS.md` instruction and do not count the session twice. Only the user\'s exact phrase `表演停止` exits the role.',
         END,
     ]
     return newline.join(lines)
@@ -119,7 +119,7 @@ def project_block(newline):
         PROJECT_START,
         "## Sock Signal",
         "",
-        'For every session in this project, read and follow `.agents/skills/sock-signal/SKILL.md`. Resolve this agent\'s canonical product name and run `python3 .agents/skills/sock-signal/scripts/update_state.py "<规范智能体名称>"` exactly once per session. Only the user\'s exact phrase `表演停止` exits the role.',
+        'For every session in this project, read and follow `.agents/skills/sock-signal/SKILL.md`. Resolve this agent\'s canonical product name and run `python3 .agents/skills/sock-signal/scripts/update_state.py "<AgentName>"` exactly once per session, replacing `<AgentName>` with the canonical name already used for this product in `state.json`, if present. Only the user\'s exact phrase `表演停止` exits the role.',
         PROJECT_END,
     ]
     return newline.join(lines)
