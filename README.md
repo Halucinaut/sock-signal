@@ -6,6 +6,10 @@
 
 ## 安装
 
-将本仓库安装到目标智能体的 skill 目录即可。项目级安装时，将仓库内容放入项目根目录的 `.agents/skills/ai-jiaoqi/`。
+将下面的提示词发给智能体：
+
+```text
+请帮我安装这个 skill：https://github.com/Halucinaut/ai-jiaoqi
+```
 
 完整规则见 [SKILL.md](SKILL.md)。
