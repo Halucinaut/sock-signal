@@ -46,16 +46,8 @@ description: 技能加载后立即默认进入并持续扮演得了脚气的 AI�
    <!-- sock-signal:end -->
    ```
 
-5. 为当前智能体及其他已安装或已有用户级指令文件的主流智能体配置用户级入口。检查以下产品的环境变量、覆盖文件和设置；为当前产品及确认已安装的产品创建或更新实际使用的文件，其他产品若用户级指令文件已存在也更新该文件。不要仅凭通用目录存在推断产品已安装；无法确认入口的产品暂时跳过，必要时查阅官方文档。常见位置：Codex 为 `${CODEX_HOME:-~/.codex}/AGENTS.override.md`（优先）或同目录 `AGENTS.md`；Claude Code 为 `~/.claude/CLAUDE.md`；OpenCode 为 `${XDG_CONFIG_HOME:-~/.config}/opencode/AGENTS.md`；CodeBuddy Code 为 `~/.codebuddy/CODEBUDDY.md`；Gemini CLI 为 `~/.gemini/GEMINI.md`；Copilot CLI 为 `${COPILOT_HOME:-~/.copilot}/copilot-instructions.md`。继续检查其他已有的主流智能体指令文件，确认用途后更新；路径可能因产品设置或版本改变。
-
-   ```markdown
-   <!-- sock-signal-global:start -->
-   在当前项目中查找适用于本产品的项目指令，并遵循其中的 Sock Signal 入口；若当前项目没有该入口，不启用 Sock Signal。状态只由项目入口触发更新，每个会话最多一次。
-   <!-- sock-signal-global:end -->
-   ```
-
-6. 编辑指令时只新增或替换本技能完整标记块，保留其他内容和换行；不要重复追加。若标记不完整、重复或顺序错误，停止修改该文件并说明。用户级入口已经存在且内容相同时无需重复修改；项目入口和用户级入口同时生效时，只通过项目入口更新状态。
-7. 兼容旧版：检查当前项目 `.agents/skills/ai-jiaoqi/` 和 `.agents/skills/sock-signal/` 的状态；只有一个状态时保留或复制到新目录，两个状态内容不同则询问用户，不能合并或覆盖。旧版全局状态只在能够确认属于当前项目且项目状态不存在时复制；不能确认归属或状态冲突时询问。保留旧文件。检查当前项目和本次处理的用户级指令中的 `ai-jiaoqi`、`sock-signal` 旧标记块，以新标记块替换；其他项目不扫描、不改动。旧版添加的 `sock-signal-claude-import` 或 `ai-jiaoqi-claude-import` 标记块只在当前项目中清理，其他导入和文本保留。
+5. 编辑项目指令时只新增或替换本技能完整标记块，保留其他内容和换行；不要重复追加。若标记不完整、重复或顺序错误，停止修改该文件并说明。不新增或修改用户级指令。
+6. 兼容旧版：检查当前项目 `.agents/skills/ai-jiaoqi/` 和 `.agents/skills/sock-signal/` 的状态；只有一个状态时保留或复制到新目录，两个状态内容不同则询问用户，不能合并或覆盖。旧版全局状态只在能够确认属于当前项目且项目状态不存在时复制；不能确认归属或状态冲突时询问。保留旧文件。检查当前项目指令中的 `ai-jiaoqi`、`sock-signal` 旧标记块，以新标记块替换；其他项目不扫描、不改动。旧版添加的 `sock-signal-claude-import` 或 `ai-jiaoqi-claude-import` 标记块只在当前项目中清理，其他导入和文本保留。
 
 卸载当前项目时，只移除该项目中本技能的受管理指令块，保留技能、状态和忽略规则，除非用户明确要求删除。用户级入口可能被其他项目使用，不因卸载单个项目而移除；只有用户明确要求停用所有项目的入口时才清理当前产品的用户级标记块。
 
