@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install Sock Signal in the current project and link it from user instructions."""
+"""Install Sock Signal globally and link it from user and project instructions."""
 
 import argparse
 import os
@@ -108,18 +108,18 @@ def block_for(skill_root, newline):
         START,
         "## Sock Signal",
         "",
-        f'For sessions outside the source project `{skill_root.parent.parent.parent}`, read and follow `{skill_path}`. Resolve this agent\'s canonical product name, then run `python3 "{script_path}" "<AgentName>"` exactly once per session so its adjacent `state.json` advances. Replace `<AgentName>` with the canonical name already used for this product in `state.json`, if present. In the source project, follow its `AGENTS.md` instruction and do not count the session twice. Only the user\'s exact phrase `表演停止` exits the role.',
+        f'Read and follow `{skill_path}`. Resolve this agent\'s canonical product name, then run `python3 "{script_path}" "<AgentName>"` once per session when permitted. Use the existing canonical name in `state.json` if present. Do not count twice if another instruction gives the same command. Stop roleplay whenever the user clearly asks to stop.',
         END,
     ]
     return newline.join(lines)
 
 
-def project_block(newline):
+def project_block(skill_root, newline):
     lines = [
         PROJECT_START,
         "## Sock Signal",
         "",
-        'For every session in this project, read and follow `.agents/skills/sock-signal/SKILL.md`. Resolve this agent\'s canonical product name and run `python3 .agents/skills/sock-signal/scripts/update_state.py "<AgentName>"` exactly once per session, replacing `<AgentName>` with the canonical name already used for this product in `state.json`, if present. Only the user\'s exact phrase `表演停止` exits the role.',
+        f'For this project, read and follow `{skill_root / "SKILL.md"}`. Run `python3 "{skill_root / "scripts" / "update_state.py"}" "<AgentName>"` once per session when permitted, using the canonical product name. Do not count twice if user-level instructions also apply. Stop roleplay whenever the user clearly asks to stop.',
         PROJECT_END,
     ]
     return newline.join(lines)
@@ -181,38 +181,14 @@ def copy_skill(source, target):
     if target.is_symlink():
         raise ValueError(f"技能目标是符号链接，拒绝覆盖：{target}")
 
-    def ignore_runtime_state(_directory, names):
-        return {name for name in names if name in {"state.json", "state.json.lock", "__pycache__"}}
+    target.mkdir(parents=True, exist_ok=True)
+    for relative in ("SKILL.md", "scripts/update_state.py", "scripts/install_global.py"):
+        destination = target / relative
+        if destination.is_symlink():
+            raise ValueError(f"技能文件是符号链接，拒绝覆盖：{destination}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source / relative, destination)
 
-    shutil.copytree(source, target, dirs_exist_ok=True, ignore=ignore_runtime_state)
-    state = target / "state.json"
-    if not state.exists():
-        state.write_text('{"version": 1, "agents": {}}\n', encoding="utf-8")
-
-
-def migrate_legacy_skill(source, target, legacy):
-    if not legacy.exists():
-        return False
-    if legacy.is_symlink() or not legacy.is_dir():
-        raise ValueError(f"旧技能目标不是普通目录，拒绝迁移：{legacy}")
-    if target.is_symlink():
-        raise ValueError(f"技能目标是符号链接，拒绝覆盖：{target}")
-
-    old_state = legacy / "state.json"
-    new_state = target / "state.json"
-    if target.exists() and old_state.is_file() and new_state.is_file() and old_state.read_bytes() != new_state.read_bytes():
-        raise ValueError(f"新旧目录都有不同状态文件，拒绝合并：{legacy} 与 {target}")
-
-    preserve_target_state = new_state.is_file()
-
-    def ignore_runtime_state(_directory, names):
-        ignored = {name for name in names if name in {"__pycache__"}}
-        if preserve_target_state and "state.json" in names:
-            ignored.add("state.json")
-        return ignored
-
-    shutil.copytree(legacy, target, dirs_exist_ok=True, ignore=ignore_runtime_state)
-    return True
 
 
 def main():
@@ -228,8 +204,8 @@ def main():
 
     source = Path(__file__).resolve().parents[1]
     project_root = Path.cwd().resolve()
-    skill_root = project_root / ".agents" / "skills" / "sock-signal"
-    legacy_skill_root = project_root / ".agents" / "skills" / "ai-jiaoqi"
+    skill_root = HOME / ".agents" / "skills" / "sock-signal"
+    previous_roots = [project_root / ".agents" / "skills" / name for name in ("sock-signal", "ai-jiaoqi")]
     paths = config_paths()
     agents = selected_agents(args.agents.strip().lower(), paths)
     operations = []
@@ -237,7 +213,7 @@ def main():
     old_project_agents = read_text(project_agents)
     new_project_agents = update_managed_block(
         old_project_agents,
-        project_block(newline_for(old_project_agents)),
+        project_block(skill_root, newline_for(old_project_agents)),
         PROJECT_START,
         PROJECT_END,
         LEGACY_PROJECT_START,
@@ -308,27 +284,30 @@ def main():
     if args.dry_run:
         if not args.uninstall:
             print(f"Would install skill to: {skill_root}")
-            if legacy_skill_root.exists():
-                print(f"Would migrate old skill directory: {legacy_skill_root}")
+            for previous in previous_roots:
+                if (previous / "state.json").is_file():
+                    print(f"Would preserve previous state if needed: {previous / 'state.json'}")
         for path, _new in operations:
             print(f"Would {'remove block from' if args.uninstall else 'update'}: {path}")
         if not operations and args.uninstall:
             print("No managed instruction blocks found.")
         return
 
-    migrated = False
     if not args.uninstall:
-        migrated = migrate_legacy_skill(source, skill_root, legacy_skill_root)
+        state = skill_root / "state.json"
+        previous_states = [p / "state.json" for p in previous_roots if (p / "state.json").is_file()]
+        if not state.exists() and len(previous_states) > 1 and previous_states[0].read_bytes() != previous_states[1].read_bytes():
+            raise ValueError("旧安装存在不同状态文件，无法自动选择；请先保留并确认状态")
         copy_skill(source, skill_root)
+        if not state.exists() and previous_states:
+            shutil.copy2(previous_states[0], state)
+        elif not state.exists():
+            state.write_text('{"version": 1, "agents": {}}\n', encoding="utf-8")
     for path, text in operations:
         write_atomic(path, text)
-    if migrated:
-        shutil.rmtree(legacy_skill_root)
 
     if not args.uninstall:
-        print(f"Installed project skill: {skill_root}")
-        if migrated:
-            print(f"Migrated existing skill directory: {legacy_skill_root}")
+        print(f"Installed global skill: {skill_root}")
     for path, _text in operations:
         print(f"{'Removed managed block from' if args.uninstall else 'Updated'}: {path}")
     if args.uninstall:
